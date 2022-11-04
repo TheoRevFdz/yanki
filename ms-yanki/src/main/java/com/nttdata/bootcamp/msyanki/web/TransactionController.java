@@ -19,14 +19,11 @@ import org.springframework.web.bind.annotation.RestController;
 import com.nttdata.bootcamp.msyanki.producer.BalanceProducer;
 import com.nttdata.bootcamp.msyanki.services.MovementService;
 import com.nttdata.bootcamp.msyanki.services.TransactionService;
-import com.nttdata.bootcamp.msyanki.services.YankiTransactionService;
 import com.nttdata.bootcamp.msyanki.web.mapper.IMovementMapper;
 import com.nttdata.bootcamp.msyanki.web.mapper.ITransactionMapper;
-import com.nttdata.bootcamp.msyanki.web.mapper.IYankiTransactionMapper;
 import com.nttdata.bootcamp.msyanki.web.model.BalanceModel;
 import com.nttdata.bootcamp.msyanki.web.model.MovementModel;
 import com.nttdata.bootcamp.msyanki.web.model.TransactionModel;
-import com.nttdata.bootcamp.msyanki.web.model.YankiTransactionModel;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,9 +46,6 @@ public class TransactionController {
 	private TransactionService transactionService;
 
 	@Autowired
-	private YankiTransactionService yankiTransactionService;
-
-	@Autowired
 	private MovementService movementService;
 
 	@Autowired
@@ -59,9 +53,6 @@ public class TransactionController {
 
 	@Autowired
 	private ITransactionMapper transactionMapper;
-
-	@Autowired
-	private IYankiTransactionMapper yankiTransactionMapper;
 
 	@Autowired
 	private IMovementMapper movementMapper;
@@ -81,26 +72,20 @@ public class TransactionController {
 	}
 
 	@PostMapping
-	public Mono<ResponseEntity<YankiTransactionModel>> create(@Valid @RequestBody YankiTransactionModel request) {
+	public Mono<ResponseEntity<TransactionModel>> create(@Valid @RequestBody TransactionModel request) {
 		log.info("create executed {}", request);
-		return yankiTransactionService.create(yankiTransactionMapper.modelToEntity(request))
-				.map(transaction -> yankiTransactionMapper.entityToModel(transaction))
+		return transactionService.create(transactionMapper.modelToEntity(request))
+				.map(transaction -> transactionMapper.entityToModel(transaction))
 				.flatMap(transactionModel -> movementService
 						.create(movementMapper.modelToEntity(initializeSender(transactionModel)))
-						.map(movement -> yankiTransactionMapper.entityToModel(movement))
+						.map(movement -> movementMapper.entityToModel(movement))
 						.map(this::sendBalance)
-						// .map(movement->{
-						// 	if(request.getSenderAccount()!=null){
-
-						// 	}
-						// })
 						.map(movement -> transactionModel))
 				.flatMap(transactionModel -> movementService
 						.create(movementMapper.modelToEntity(initializeReceiver(transactionModel)))
 						.map(movement -> movementMapper.entityToModel(movement))
 						.map(this::sendBalance)
 						.map(movement -> transactionModel))
-				// .flatMap(transactionModel->move)
 				.flatMap(c -> Mono.just(ResponseEntity
 						.created(URI.create(String.format("http://%s:%s/%s/%s", name, port, "transaction", c.getId())))
 						.body(c)))

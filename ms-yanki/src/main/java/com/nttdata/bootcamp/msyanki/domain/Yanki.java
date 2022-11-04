@@ -32,5 +32,5 @@ public class Yanki {
     private String imei;
     @NotNull
     private String email;
-    private String nroAccount;
+    private String debitCard;
 }
